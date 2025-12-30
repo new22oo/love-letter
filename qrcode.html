@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>จดหมายขอบคุณ + QR Code + เพลง</title>
+
+<style>
+:root{
+  --paper-bg:#fff8f6;
+  --accent:#e76f51;
+  --muted:#6b6b6b;
+  --card:#fff;
+}
+body{
+  font-family:"Noto Sans Thai","Segoe UI",sans-serif;
+  background:linear-gradient(180deg,#ffeef0 0%, #fff 40%);
+  margin:24px;
+  display:flex;
+  gap:20px;
+  justify-content:center;
+  align-items:flex-start;
+  flex-wrap:wrap;
+}
+
+/* Controls */
+.controls{
+  width:360px;
+  background:var(--card);
+  border-radius:12px;
+  box-shadow:0 6px 18px rgba(0,0,0,0.06);
+  padding:16px;
+}
+.controls h3{margin:0 0 10px;color:var(--accent);}
+label{display:block;font-size:13px;color:var(--muted);margin-top:8px;}
+input, textarea{
+  width:100%;box-sizing:border-box;padding:10px;margin-top:6px;
+  border:1px solid #eee;border-radius:8px;font-size:14px;
+}
+textarea{min-height:140px;}
+
+.btn{
+  display:inline-block;padding:10px 14px;margin-top:12px;
+  border-radius:10px;background:var(--accent);color:#fff;
+  border:none;cursor:pointer;
+}
+.btn.secondary{background:#888}
+
+/* Letter */
+.letter{
+  width:794px;
+  background:var(--paper-bg);
+  padding:48px 56px;
+  border-radius:12px;
+  box-shadow:0 8px 30px rgba(0,0,0,0.08);
+  font-size:18px;
+  line-height:1.6;
+  position:relative;
+}
+.header{text-align:right;color:var(--muted);font-size:14px;}
+h1{color:var(--accent);font-size:34px;margin:18px 0;}
+.body-text{white-space:pre-wrap;font-size:20px;}
+.signature{text-align:right;margin-top:36px;font-weight:600;}
+
+/* QR */
+.qr-box{
+  position:absolute;
+  right:48px;
+  bottom:48px;
+  background:rgba(255,255,255,0.95);
+  padding:10px;
+  border-radius:10px;
+  text-align:center;
+  box-shadow:0 6px 16px rgba(0,0,0,0.08);
+}
+.qr-box img{width:160px;height:160px;}
+
+/* Music */
+.music-box{
+  position:absolute;
+  left:48px;
+  bottom:48px;
+  background:rgba(255,255,255,0.95);
+  padding:10px;
+  border-radius:10px;
+  text-align:center;
+  box-shadow:0 6px 16px rgba(0,0,0,0.08);
+}
+.music-box audio{width:200px;}
+.music-box iframe{border-radius:10px;}
+
+@media print{
+  .controls{display:none;}
+  body{margin:0;}
+  .letter{box-shadow:none;width:auto;padding:36mm;}
+}
+@media(max-width:1000px){
+  .letter{width:100%;padding:28px;}
+}
+</style>
+</head>
+
+<body>
+
+<div class="controls">
+  <h3>ตั้งค่าจดหมาย</h3>
+
+  <label>ชื่อผู้รับ</label>
+  <input id="toName" value="ถึง เพื่อนคนนั้นที่พัฒนาความสัมพันธ์อยู่">
+
+  <label>ชื่อผู้ส่ง</label>
+  <input id="fromName" value="จาก นิว">
+
+  <label>ข้อความจดหมาย</label>
+  <textarea id="letterText">
+ขอบคุณที่อยู่ด้วยกันมาจนถึงสิ้นปีนี้นะ
+ขอบคุณที่ไม่เดินหนีไปไหน
+ถึงบางวันเราจะไม่น่ารักเลยก็ตาม
+
+ปีนี้มันไม่ง่าย
+แต่การมีเธออยู่ข้างๆ
+ทำให้ทุกอย่างมีความหมาย
+
+รักนะ 🤍
+  </textarea>
+
+  <label>ข้อความ / ลิงก์ QR</label>
+  <input id="qrContent" value="ขอบคุณที่อยู่ด้วยกันมาจนถึงสิ้นปีนะ">
+
+  <label>ลิงก์เพลง (MP3 หรือ YouTube)</label>
+  <input id="musicUrl" placeholder="https://youtu.be/xxxx หรือ https://example.com/song.mp3">
+
+  <button class="btn" id="btnUpdate">อัปเดต</button>
+  <button class="btn secondary" id="btnPrint">พิมพ์ / PDF</button>
+</div>
+
+<article class="letter">
+  <div class="header" id="headerDate"></div>
+  <h1 id="title"></h1>
+  <div class="body-text" id="bodyText"></div>
+  <div class="signature" id="signature"></div>
+
+  <div class="music-box" id="musicBox" style="display:none">
+    <div style="font-size:13px;color:#6b6b6b">🎵 เพลงสำหรับเธอ</div>
+    <audio id="audioPlayer" controls loop>
+      <source id="audioSource">
+    </audio>
+    <iframe id="ytPlayer" width="200" height="113"
+      allow="autoplay; encrypted-media"
+      allowfullscreen
+      style="display:none">
+    </iframe>
+  </div>
+
+  <div class="qr-box" id="qrBox">
+    <div style="font-size:13px;color:#6b6b6b">สแกน QR</div>
+    <img id="qrImg" alt="QR Code">
+  </div>
+</article>
+
+<script>
+const toName = document.getElementById("toName");
+const fromName = document.getElementById("fromName");
+const letterText = document.getElementById("letterText");
+const qrContent = document.getElementById("qrContent");
+const musicUrl = document.getElementById("musicUrl");
+
+const title = document.getElementById("title");
+const bodyText = document.getElementById("bodyText");
+const signature = document.getElementById("signature");
+const qrImg = document.getElementById("qrImg");
+const headerDate = document.getElementById("headerDate");
+
+const musicBox = document.getElementById("musicBox");
+const audioPlayer = document.getElementById("audioPlayer");
+const audioSource = document.getElementById("audioSource");
+const ytPlayer = document.getElementById("ytPlayer");
+
+function formatThaiDate(d){
+  const m=["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
+  return `${d.getDate()} ${m[d.getMonth()]} ${d.getFullYear()+543}`;
+}
+headerDate.textContent = formatThaiDate(new Date());
+
+function updatePreview(){
+  title.textContent = toName.value;
+  bodyText.textContent = letterText.value;
+  signature.textContent = `ด้วยรัก\n${fromName.value}`;
+
+  /* ✅ QR SERVER API (เสถียร) */
+  const qr = encodeURIComponent(qrContent.value || "");
+  qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${qr}`;
+
+  /* เพลง */
+  const music = musicUrl.value.trim();
+  if(!music){
+    musicBox.style.display="none";
+    audioPlayer.pause();
+    ytPlayer.src="";
+    return;
+  }
+  musicBox.style.display="block";
+
+  if(music.includes("youtu")){
+    audioPlayer.style.display="none";
+    ytPlayer.style.display="block";
+    const id = music.includes("youtu.be")
+      ? music.split("/").pop()
+      : new URL(music).searchParams.get("v");
+    ytPlayer.src=`https://www.youtube.com/embed/${id}?autoplay=1&loop=1`;
+  }else{
+    ytPlayer.style.display="none";
+    audioPlayer.style.display="block";
+    audioSource.src=music;
+    audioPlayer.load();
+  }
+}
+
+document.getElementById("btnUpdate").onclick=updatePreview;
+document.getElementById("btnPrint").onclick=()=>{updatePreview();window.print();};
+[toName,fromName,letterText,qrContent,musicUrl].forEach(el=>el.oninput=updatePreview);
+
+updatePreview();
+</script>
+
+</body>
+</html>
